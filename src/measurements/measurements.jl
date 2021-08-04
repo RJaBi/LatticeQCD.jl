@@ -5,8 +5,8 @@ module Measurements
     import ..Gaugefields:GaugeFields,set_wing!,substitute!,
             make_staple!,calc_Plaq!,SU3GaugeFields,
             SU2GaugeFields,SU3GaugeFields_1d,SU2GaugeFields_1d,
-            GaugeFields_1d,calc_Polyakov,calc_Plaq,calc_Plaq_Spat,calc_Plaq_notrace_1d,SUn,SU2,SU3,TA,add!,
-            SUNGaugeFields,SUNGaugeFields_1d,
+            GaugeFields_1d,calc_Polyakov,calc_Plaq,calc_Plaq_notrace_1d,SUn,SU2,SU3,TA,add!,
+            SUNGaugeFields,SUNGaugeFields_1d,calc_Plaq_Spat,calc_Plaq_Temp,
             Loops,evaluate_loops!,evaluate_loops,
             U1GaugeFields,U1GaugeFields_1d,calc_smearingU
     import ..Fermionfields:clear!,FermionFields,WilsonFermion
@@ -370,8 +370,9 @@ module Measurements
                 if method["methodname"] == "Plaquette"
                     plaq = calc_plaquette(U)
                     sPlaq = calc_plaquette_spat(U)
-                    println_verbose1(verbose,"$itrj $plaq $sPlaq# plaq sPlaq")
-                    println(measfp,"$itrj $plaq $sPlaq # plaq sPlaq")
+                    tPlaq = calc_plaquette_temp(U)
+                    println_verbose1(verbose,"$itrj $plaq $sPlaq $tPlaq # plaq sPlaq tPlaq")
+                    println(measfp,"$itrj $plaq $sPlaq $tPlaq # plaq sPlaq tPlaq")
                 elseif method["methodname"] == "integrated_fermion_action"
                     Sfexact,Sfapprox = calc_fermionaction(univ,measset.fermions[i],method)
                     println_verbose1(verbose,"$itrj $(real(Sfexact)) $(real(Sfapprox)) # fermion action")
@@ -528,6 +529,9 @@ module Measurements
         factor = 2/(U[1].NV*4*3*U[1].NC)
     end
 
+    function calc_factor_plaq_temp(U)
+        factor = 2*2/(U[1].NV*4*3*U[1].NC)
+    end
 
 # - - - Polyakov loop correlator
 function calc_Polyakov_loop_correlator(U::Array{T,1}, R) where T <: GaugeFields
@@ -750,6 +754,14 @@ end
         plaq = calc_Plaq_Spat(U)*factor
         return real(plaq)
     end
+
+    function calc_plaquette_temp(U::Array{T,1}) where T <: GaugeFields
+        plaq = 0
+        factor = calc_factor_plaq_temp(U)
+        plaq = calc_Plaq_Temp(U)*factor
+        return real(plaq)
+    end
+
 
     function calc_plaquette(univ::Universe,U::Array{T,1}) where T <: GaugeFields
         plaq = 0

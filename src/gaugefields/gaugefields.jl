@@ -1917,6 +1917,40 @@ module Gaugefields
     end
 
 
+    function make_staple_spat!(staple::GaugeFields_1d,U,μ,nu,temp1,temp2,temp3)
+        #clear!(staple)
+
+        idir2 = zeros(Int64,2)
+
+        #for ν=1:4
+        ν = nu
+        if ν == μ
+            return
+        end
+        
+        #=
+        c       x+nu temp2
+        c        .---------.
+        c        I         I
+        c  temp1 I         I
+        c        I         I
+        c        .         .
+        c        x        x+mu
+        =#
+        substitute!(temp1,U[ν])
+        gauge_shift!(temp2,ν,U[μ])
+        #mul!(temp3,U[ν],temp2)
+        mul!(temp3,temp1,temp2)
+        
+        gauge_shift!(temp1,μ,U[ν])
+        mul!(temp2,temp3,temp1')
+        add!(staple,temp2)
+        
+        
+        
+    end
+
+
 
     function make_staple_double!(staple::GaugeFields_1d,U,μ,temp1,temp2,temp3)
         clear!(staple)
@@ -2598,6 +2632,71 @@ c-----------------------------------------------------c
         #plaq /= 
         return plaq*0.5
     end
+
+    function calc_Plaq_Spat(U::Array{T,1}) where T <: GaugeFields
+        NC = U[1].NC
+        NX = U[1].NX
+        NY = U[1].NY
+        NZ = U[1].NZ
+        NT = U[1].NT
+
+        temp1 = GaugeFields_1d(NC,NX,NY,NZ,NT)
+        temp2 = GaugeFields_1d(NC,NX,NY,NZ,NT)
+        temp3 = GaugeFields_1d(NC,NX,NY,NZ,NT)
+        staple = GaugeFields_1d(NC,NX,NY,NZ,NT)
+
+        return calc_Plaq_Spat!(U::Array{T,1},temp1,temp2,temp3,staple)
+    end
+
+    function calc_Plaq_Spat!(U::Array{T,1},temp1,temp2,temp3,staple) where T <: GaugeFields
+        plaq = 0
+        for μ=1:3
+            clear!(staple)
+            #make_staple!(staple,U,μ,temp1,temp2,temp3)
+            make_staple_spat!(staple,U,μ,1,temp1,temp2,temp3)
+            make_staple_spat!(staple,U,μ,2,temp1,temp2,temp3)
+            make_staple_spat!(staple,U,μ,3,temp1,temp2,temp3)
+            substitute!(temp1,U[μ])
+
+            mul!(temp2,temp1,staple')
+            #mul!(temp2,U[μ],staple')
+            plaq += tr(temp2)
+        end
+        #plaq /= 
+        return plaq*0.5
+    end
+
+    function calc_Plaq_Temp(U::Array{T,1}) where T <: GaugeFields
+        NC = U[1].NC
+        NX = U[1].NX
+        NY = U[1].NY
+        NZ = U[1].NZ
+        NT = U[1].NT
+
+        temp1 = GaugeFields_1d(NC,NX,NY,NZ,NT)
+        temp2 = GaugeFields_1d(NC,NX,NY,NZ,NT)
+        temp3 = GaugeFields_1d(NC,NX,NY,NZ,NT)
+        staple = GaugeFields_1d(NC,NX,NY,NZ,NT)
+
+        return calc_Plaq_Temp!(U::Array{T,1},temp1,temp2,temp3,staple)
+    end
+
+    function calc_Plaq_Temp!(U::Array{T,1},temp1,temp2,temp3,staple) where T <: GaugeFields
+        plaq = 0
+        for μ=4:4
+            clear!(staple)
+            make_staple!(staple,U,μ,temp1,temp2,temp3)
+            substitute!(temp1,U[μ])
+
+            mul!(temp2,temp1,staple')
+            #mul!(temp2,U[μ],staple')
+            plaq += tr(temp2)
+        end
+        #plaq /= 
+        return plaq*0.5
+    end
+
+
 
     function calc_Plaq!(U::Array{T,1},temps::Array{T_1d,1}) where {T <: GaugeFields,T_1d <: GaugeFields_1d}
         plaq = 0
